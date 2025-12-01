@@ -1,0 +1,49 @@
+# Node modules
+node_modules/
+
+# Local environment files (do not commit secrets)
+.env
+.env.*
+.env.local
+!.env.example
+
+# TypeScript / build output
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+.pids/
+*.pid
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Prisma runtime artifacts (keep prisma/migrations committed)
+.prisma/
+
+# Editor directories and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Misc
+.cache/
+tmp/
+temp/
+
+# Docker overrides
+docker-compose.override.yml
+.env.docker
+
+# Secrets and keys
+*.pem
+*.key
+
+# Local DB files
+*.sqlite
+

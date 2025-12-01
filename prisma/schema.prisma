@@ -1,0 +1,462 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================
+// Enums
+// ==========================
+enum UserRole {
+  CLIENT
+  LAWYER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum CasteCategory {
+  GENERAL
+  OBC
+  SC
+  ST
+  EWS
+  OTHER
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  PENDING_DOCUMENTS
+  UNDER_REVIEW
+  HEARING_SCHEDULED
+  CLOSED
+  WON
+  LOST
+  SETTLED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  APPOINTMENT_BOOKED
+  APPOINTMENT_REMINDER
+  APPOINTMENT_RESCHEDULED
+  NEW_MESSAGE
+  TASK_ASSIGNED
+  DOCUMENT_UPLOADED
+  CASE_UPDATE
+  PAYMENT_RECEIVED
+}
+
+
+
+// ==========================
+// Core Models
+// ==========================
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String    @unique
+  role          UserRole  @default(CLIENT)
+  passwordHash  String?
+  avatarUrl     String?
+  isVerified    Boolean   @default(false)
+  emailVerified Boolean   @default(false)
+  phoneVerified Boolean   @default(false)
+  fcmToken      String?   // for push notifications
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  clientProfile     Client?
+  lawyerProfile     Lawyer?
+
+  // Named relations for appointments
+  appointmentsAsClient Appointment[] @relation("ClientAppointments")
+  appointmentsAsLawyer Appointment[] @relation("LawyerAppointments")
+
+  casesAsClient     Case[]             @relation("ClientCases")
+  casesAsLawyer     Case[]             @relation("LawyerCases")
+  tasksAssigned     Task[]             @relation("AssignedTasks")
+  tasksCreated      Task[]             @relation("CreatedTasks")
+  messagesSent      ChatMessage[]
+  documentsUploaded Document[]
+  payments          Payment[]
+  reviewsGiven      Review[]           @relation("GivenReviews")
+  reviewsReceived   Review[]           @relation("ReceivedReviews")
+  notifications     Notification[]
+  reports           Report[]
+  refreshTokens     RefreshToken[]
+
+  @@map("users")
+}
+
+model Client {
+  id      String @id @default(cuid())
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  city            String?
+  state           String?
+  country         String?  @default("India")
+  dob             DateTime? // Date of Birth
+  gender          Gender?   // e.g., "Male", "Female", "Other", "Prefer not to say"
+  income          Int?      // Annual income in INR (in rupees, or paise if you prefer consistency)
+  incomeProofUrl  String?   // URL to uploaded income proof document
+  caste           CasteCategory?   // e.g., "General", "OBC", "SC", "ST", etc.
+  casteProofUrl   String?   // URL to uploaded caste certificate
+  isVerified      Boolean   @default(false) // Can be used for KYC/verification by admin or system
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clients")
+}
+
+model Lawyer {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  licenseNumber        String?  @unique
+  licenseProofUrl      String?   // URL to uploaded license document
+  barCouncilId         String   @unique
+  barCouncilProofUrl   String?   // URL to bar council enrollment certificate
+  barCouncil           String?
+  specializations      String[] // e.g., ["Family", "Criminal", "Corporate"]
+  
+  organisation         String?   // e.g., "Khaitan & Co.", "Independent Practice", "ABC Law Firm"
+
+  experienceYears      Int       // total years of experience (kept for quick filtering) 
+  experience           Json?     // e.g., [{ "title": "Associate", "organisation": "XYZ Chambers", "from": "2018", "to": "2022", "description": "..." }]
+  languages            String[]
+  feePerConsultation   Int?       // in paise (₹50 = 5000)
+  bio                  String?
+  isAvailable          Boolean   @default(true)
+  isVerified           Boolean   @default(false) // admin approval
+  rating               Float     @default(0)
+  totalReviews         Int       @default(0)
+  totalConsultations   Int       @default(0)
+
+  education            Json?
+//   courtPractice        String[] // e.g., ["Supreme Court", "Delhi High Court"]
+  address              String?
+  city                 String
+  state                String
+  pincode              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lawyers")
+}
+
+// ==========================
+// Core Features
+// ==========================
+model Case {
+  id            String     @id @default(cuid())
+  title         String
+  description   String
+  category      String     // e.g., Divorce, Property Dispute
+  caseNumber    String?    // court-assigned
+  courtName     String?
+  status        CaseStatus @default(OPEN)
+
+  clientId      String
+  client        User       @relation("ClientCases", fields: [clientId], references: [id])
+  lawyerId      String?
+  lawyer        User?      @relation("LawyerCases", fields: [lawyerId], references: [id])
+
+  startedAt     DateTime?
+  closedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents     Document[]
+  hearings      Hearing[]
+  tasks         Task[]
+  timeline      CaseTimeline[]
+  chat          Chat?
+
+  @@map("cases")
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  clientId      String
+  lawyerId      String
+  client        User              @relation("ClientAppointments",fields: [clientId], references: [id])
+  lawyer        User              @relation("LawyerAppointments",fields: [lawyerId], references: [id])
+
+  scheduledAt   DateTime
+  durationMins  Int               @default(30)
+  status        AppointmentStatus @default(PENDING)
+  meetingLink   String?
+  notes         String?
+
+  paymentId     String?           @unique
+  payment       Payment?          @relation("AppointmentPayment",fields: [paymentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([lawyerId, scheduledAt]) // prevent double booking
+  @@map("appointments")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  appointmentId String?       @unique
+  appointment   Appointment?  @relation("AppointmentPayment")
+
+  amount        Int           // in paise
+  currency      String        @default("INR")
+  provider      String        // razorpay | stripe
+  providerOrderId   String?    // provider order id (e.g., razorpay order id)
+  providerPaymentId String?
+  signature     String?       // for verifying payment (if needed)
+  status        PaymentStatus @default(PENDING)
+  metadata      Json?
+
+  createdAt DateTime @default(now())
+
+  @@map("payments")
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  caseId    String?  @unique
+  case      Case?    @relation(fields: [caseId], references: [id])
+
+  messages  ChatMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("chats")
+}
+
+model ChatMessage {
+  id         String    @id @default(cuid())
+  chatId     String
+  chat       Chat      @relation(fields: [chatId], references: [id])
+  senderId   String
+  sender     User      @relation(fields: [senderId], references: [id])
+
+  text       String?
+  attachments String[]  // document URLs or IDs
+  isRead     Boolean   @default(false)
+  readAt     DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("chat_messages")
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  caseId     String?
+  case       Case?    @relation(fields: [caseId], references: [id])
+
+  uploaderId String
+  uploader   User     @relation(fields: [uploaderId], references: [id])
+
+  filename   String
+  url        String
+  mimeType   String
+  size       Int      // bytes
+  version    Int      @default(1)
+
+  uploadedAt DateTime @default(now())
+
+  @@map("documents")
+}
+
+model Hearing {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id])
+
+  date      DateTime
+  court     String?
+  judge     String?
+  purpose   String
+  outcome   String?
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hearings")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  caseId      String?
+  case        Case?      @relation(fields: [caseId], references: [id])
+
+  title       String
+  description String?
+  assignedToId String
+  assignedTo   User       @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  assignedById String
+  assignedBy   User       @relation("CreatedTasks", fields: [assignedById], references: [id])
+
+  dueDate     DateTime?
+  status      TaskStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tasks")
+}
+
+model CaseTimeline {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id])
+
+  title     String
+  description String?
+  eventDate DateTime
+  type      String   // "hearing", "document", "status_change", etc.
+
+  createdAt DateTime @default(now())
+
+  @@map("case_timelines")
+}
+
+model Review {
+  id         String  @id @default(cuid())
+  lawyerId   String
+  lawyer     User    @relation("ReceivedReviews", fields: [lawyerId], references: [id])
+  clientId   String
+  client     User    @relation("GivenReviews", fields: [clientId], references: [id])
+  appointmentId String?
+
+  rating     Int     // 1-5
+  comment    String?
+  
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, lawyerId]) // one review per lawyer per client
+  @@map("reviews")
+}
+
+// ==========================
+// Admin & Support
+// ==========================
+model AgreementTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  category  String
+  content   String   // HTML or Markdown
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("agreement_templates")
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  title       String
+  description String
+  screenshotUrl String?
+
+  status      String   @default("OPEN") // OPEN, IN_REVIEW, RESOLVED
+  resolvedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("reports")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+
+  title     String
+  body      String
+  type      NotificationType
+  data      Json?            // { appointmentId: string, caseId: string }
+
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked   Boolean  @default(false)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model LegalUpdate {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String   // "New Law", "Amendment", "Scheme"
+  publishedAt DateTime
+
+  @@map("legal_updates")
+}
+
+model Otp {
+  id         String   @id @default(cuid())
+  identifier String   // phone or email
+  code       String
+  attempts   Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([identifier])
+  @@map("otps")
+}
