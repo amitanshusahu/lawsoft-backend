@@ -1,0 +1,111 @@
+import { z } from 'zod';
+export declare const createCaseSchema: z.ZodObject<{
+    body: z.ZodObject<{
+        title: z.ZodString;
+        description: z.ZodOptional<z.ZodString>;
+        category: z.ZodOptional<z.ZodString>;
+        courtName: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export declare const updateCaseSchema: z.ZodObject<{
+    params: z.ZodObject<{
+        id: z.ZodString;
+    }, z.core.$strip>;
+    body: z.ZodObject<{
+        title: z.ZodOptional<z.ZodString>;
+        description: z.ZodOptional<z.ZodString>;
+        status: z.ZodOptional<z.ZodString>;
+        category: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export declare const addDocumentSchema: z.ZodObject<{
+    params: z.ZodObject<{
+        id: z.ZodString;
+    }, z.core.$strip>;
+    body: z.ZodObject<{
+        fileurl: z.ZodString;
+        fileName: z.ZodString;
+        mimeType: z.ZodString;
+        size: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export declare const addTimelineSchema: z.ZodObject<{
+    params: z.ZodObject<{
+        id: z.ZodString;
+    }, z.core.$strip>;
+    body: z.ZodObject<{
+        title: z.ZodString;
+        description: z.ZodOptional<z.ZodString>;
+        eventDate: z.ZodString;
+        type: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export declare const addHearingSchema: z.ZodObject<{
+    params: z.ZodObject<{
+        id: z.ZodString;
+    }, z.core.$strip>;
+    body: z.ZodObject<{
+        date: z.ZodString;
+        court: z.ZodOptional<z.ZodString>;
+        judge: z.ZodOptional<z.ZodString>;
+        purpose: z.ZodOptional<z.ZodString>;
+        notes: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+declare const _default: {
+    createCaseSchema: z.ZodObject<{
+        body: z.ZodObject<{
+            title: z.ZodString;
+            description: z.ZodOptional<z.ZodString>;
+            category: z.ZodOptional<z.ZodString>;
+            courtName: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>;
+    updateCaseSchema: z.ZodObject<{
+        params: z.ZodObject<{
+            id: z.ZodString;
+        }, z.core.$strip>;
+        body: z.ZodObject<{
+            title: z.ZodOptional<z.ZodString>;
+            description: z.ZodOptional<z.ZodString>;
+            status: z.ZodOptional<z.ZodString>;
+            category: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>;
+    addDocumentSchema: z.ZodObject<{
+        params: z.ZodObject<{
+            id: z.ZodString;
+        }, z.core.$strip>;
+        body: z.ZodObject<{
+            fileurl: z.ZodString;
+            fileName: z.ZodString;
+            mimeType: z.ZodString;
+            size: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+        }, z.core.$strip>;
+    }, z.core.$strip>;
+    addTimelineSchema: z.ZodObject<{
+        params: z.ZodObject<{
+            id: z.ZodString;
+        }, z.core.$strip>;
+        body: z.ZodObject<{
+            title: z.ZodString;
+            description: z.ZodOptional<z.ZodString>;
+            eventDate: z.ZodString;
+            type: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>;
+    addHearingSchema: z.ZodObject<{
+        params: z.ZodObject<{
+            id: z.ZodString;
+        }, z.core.$strip>;
+        body: z.ZodObject<{
+            date: z.ZodString;
+            court: z.ZodOptional<z.ZodString>;
+            judge: z.ZodOptional<z.ZodString>;
+            purpose: z.ZodOptional<z.ZodString>;
+            notes: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>;
+};
+export default _default;
+//# sourceMappingURL=case.schema.d.ts.map
